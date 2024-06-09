@@ -1,0 +1,61 @@
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
+import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def load_data(file_path):
+    data = pd.read_csv(file_path)
+    return data
+
+def preprocess_data(data):
+    data.dropna(inplace=True)
+    return data
+
+def run_kmeans(data, num_clusters):
+    kmeans = KMeans(n_clusters=num_clusters)
+    kmeans.fit(data)
+    labels = kmeans.labels_
+    return labels
+
+def run_em(data, num_clusters):
+    gmm = GaussianMixture(n_components=num_clusters)
+    gmm.fit(data)
+    labels = gmm.predict(data)
+    return labels
+
+def main():
+    st.title("EM vs k-Means Clustering")
+
+    file_path = st.file_uploader("Upload CSV file", type="csv")
+    if file_path is not None:
+        data = load_data(file_path)
+        data = preprocess_data(data)
+
+        st.write("Preview of Data:")
+        st.write(data.head())
+
+        num_clusters = st.slider("Number of Clusters", min_value=2, max_value=10)
+
+        algorithm = st.radio("Select Algorithm", ("k-Means", "EM"))
+
+        if algorithm == "k-Means":
+            st.write("Running k-Means Clustering...")
+            labels = run_kmeans(data, num_clusters)
+        else:
+            st.write("Running EM Clustering...")
+            labels = run_em(data, num_clusters)
+
+        data['Cluster'] = labels
+
+        st.write("Cluster Assignments:")
+        st.write(data.head())
+
+        fig, ax = plt.subplots()
+        sns.scatterplot(x=data.iloc[:,0], y=data.iloc[:,1], hue=data['Cluster'], palette="viridis", ax=ax)
+        ax.set_title("Cluster Assignments")
+        st.pyplot(fig)
+
+if __name__ == "__main__":
+    main()
