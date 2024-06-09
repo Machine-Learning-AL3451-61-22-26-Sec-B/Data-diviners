@@ -1,0 +1,38 @@
+import streamlit as st
+import numpy as np
+
+def candidate_elimination(examples):
+    specific_h = examples[0][:-1]
+    general_h = [['?' for _ in range(len(specific_h))] for _ in range(len(specific_h))]
+    
+    for example in examples:
+        if example[-1] == 'Y':
+            for i in range(len(specific_h)):
+                if example[i] != specific_h[i]:
+                    specific_h[i] = '?'
+                    general_h[i][i] = '?'
+        elif example[-1] == 'N':
+            for i in range(len(specific_h)):
+                if example[i] != specific_h[i]:
+                    general_h[i][i] = specific_h[i]
+                else:
+                    general_h[i][i] = '?'
+    
+    return specific_h, general_h
+
+def main():
+    st.title("Candidate Elimination")
+    
+    st.write("Enter training examples (each example as a comma-separated string with the last element representing the target label):")
+    examples_input = st.text_area("Example input", "Sunny,Hot,High,Weak,N\nSunny,Hot,High,Strong,N\nOvercast,Hot,High,Weak,Y\nRain,Mild,High,Weak,Y\nRain,Cool,Normal,Weak,Y\nRain,Cool,Normal,Strong,N\nOvercast,Cool,Normal,Strong,Y\nSunny,Mild,High,Weak,N\nSunny,Cool,Normal,Weak,Y\nRain,Mild,Normal,Weak,Y\nSunny,Mild,Normal,Strong,Y\nOvercast,Mild,High,Strong,Y\nOvercast,Hot,Normal,Weak,Y\nRain,Mild,High,Strong,N")
+    examples = [example.strip().split(',') for example in examples_input.split('\n')]
+    
+    if st.button("Run Candidate Elimination"):
+        specific_h, general_h = candidate_elimination(examples)
+        
+        st.subheader("Final Hypotheses:")
+        st.write("Specific Hypothesis (S):", specific_h)
+        st.write("General Hypothesis (G):", general_h)
+
+if __name__ == "__main__":
+    main()
