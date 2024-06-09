@@ -1,0 +1,32 @@
+import pandas as pd
+import streamlit as st
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import preprocessing
+from sklearn.tree import export_text
+
+def main():
+    st.title("ID3 Algorithm")
+
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+    if uploaded_file is not None:
+        data = pd.read_csv(uploaded_file)
+        st.write(data.head())
+
+        target_variable = st.selectbox("Select the target variable:", options=data.columns)
+
+        X = data.drop(columns=[target_variable])
+        y = data[target_variable]
+
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
+
+        model = DecisionTreeClassifier(criterion="entropy")
+        model.fit(X, y)
+
+        tree_rules = export_text(model, feature_names=list(X.columns))
+        st.write("Decision Tree Rules:")
+        st.text(tree_rules)
+
+if __name__ == "__main__":
+    main()
