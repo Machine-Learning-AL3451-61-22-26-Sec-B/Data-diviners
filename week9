@@ -1,0 +1,65 @@
+import numpy as np
+import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
+
+def load_data(file_path):
+    data = pd.read_csv(file_path)
+    return data
+
+def locally_weighted_regression(x, y, query_point, tau):
+    m = x.shape[0]
+    x = np.hstack((np.ones((m, 1)), x)) # Adding bias term
+
+    # Convert query_point to the same shape as x
+    query_point = np.hstack(([1], query_point))
+
+    # Initialize weights as diagonal matrix
+    weights = np.zeros((m, m))
+
+    for i in range(m):
+        weights[i, i] = np.exp(-np.sum((x[i] - query_point) ** 2) / (2 * tau * tau))
+
+    # Compute theta using Normal Equation
+    theta = np.linalg.pinv(x.T @ (weights @ x)) @ (x.T @ (weights @ y))
+
+    # Predict
+    y_pred = query_point @ theta
+    return y_pred
+
+def main():
+    st.title("Locally Weighted Regression")
+
+    file_path = st.file_uploader("Upload CSV file", type="csv")
+    if file_path is not None:
+        data = load_data(file_path)
+
+        st.write("Preview of Data:")
+        st.write(data.head())
+
+        x_col = st.selectbox("Select X column", options=data.columns)
+        y_col = st.selectbox("Select Y column", options=data.columns)
+
+        x = data[x_col].values.reshape(-1, 1)
+        y = data[y_col].values
+
+        tau = st.slider("Select Tau value", min_value=0.01, max_value=1.0, step=0.01, value=0.5)
+
+        query_point = st.number_input("Enter query point for prediction", value=5.0)
+
+        y_pred = locally_weighted_regression(x, y, [query_point], tau)
+
+        st.write("Predicted Y value:", y_pred[0])
+
+        # Plot
+        plt.figure(figsize=(10, 6))
+        plt.scatter(x, y, label="Data Points")
+        plt.scatter(query_point, y_pred, color='red', label="Predicted Point")
+        plt.title("Locally Weighted Regression")
+        plt.xlabel(x_col)
+        plt.ylabel(y_col)
+        plt.legend()
+        st.pyplot()
+
+if __name__ == "__main__":
+    main()
