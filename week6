@@ -1,0 +1,72 @@
+import pandas as pd
+from pgmpy.models import BayesianModel
+from pgmpy.estimators import BayesianEstimator
+from pgmpy.inference import VariableElimination
+import streamlit as st
+
+def load_data():
+    data = pd.read_csv("corona_dataset.csv")
+    return data
+
+def preprocess_data(data):
+    data.replace({'Positive': 1, 'Negative': 0}, inplace=True)
+    return data
+
+def create_model():
+    model = BayesianModel([
+        ('Fever', 'CORONA'),
+        ('Cough', 'CORONA'),
+        ('SoreThroat', 'CORONA'),
+        ('BreathingDifficulty', 'CORONA'),
+        ('TravelHistory', 'CORONA'),
+        ('CORONA', 'TestResult')
+    ])
+    return model
+
+def main():
+    st.title("CORONA Diagnosis Bayesian Network")
+
+    data = load_data()
+    data = preprocess_data(data)
+
+    st.write("Preview of Data:")
+    st.write(data.head())
+
+    st.write("Constructing Bayesian Network...")
+    model = create_model()
+
+    st.write("Learning parameters...")
+    model.fit(data, estimator=BayesianEstimator, prior_type="BDeu")
+
+    st.write("Model constructed and parameters learned.")
+
+    st.write("Probabilistic inference using Variable Elimination...")
+    corona_infer = VariableElimination(model)
+
+    st.write("Enter patient information:")
+
+    fever = st.selectbox("Fever", options=["Yes", "No"])
+    cough = st.selectbox("Cough", options=["Yes", "No"])
+    sore_throat = st.selectbox("Sore Throat", options=["Yes", "No"])
+    breathing_difficulty = st.selectbox("Breathing Difficulty", options=["Yes", "No"])
+    travel_history = st.selectbox("Travel History", options=["Yes", "No"])
+
+    patient_data = {
+        "Fever": fever,
+        "Cough": cough,
+        "SoreThroat": sore_throat,
+        "BreathingDifficulty": breathing_difficulty,
+        "TravelHistory": travel_history
+    }
+
+    st.write("Patient Information:")
+    st.write(patient_data)
+
+    st.write("Performing inference...")
+    corona_probabilities = corona_infer.query(variables=['CORONA'], evidence=patient_data)
+
+    st.write("Results:")
+    st.write(corona_probabilities)
+
+if __name__ == "__main__":
+    main()
