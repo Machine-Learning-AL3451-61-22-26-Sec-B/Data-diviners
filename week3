@@ -1,0 +1,62 @@
+import numpy as np
+import streamlit as st
+
+class NeuralNetwork:
+    def __init__(self, input_size, hidden_size, output_size):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        
+        self.weights_input_hidden = np.random.randn(self.input_size, self.hidden_size)
+        self.weights_hidden_output = np.random.randn(self.hidden_size, self.output_size)
+        
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+    
+    def sigmoid_derivative(self, x):
+        return x * (1 - x)
+    
+    def feedforward(self, inputs):
+        self.hidden_sum = np.dot(inputs, self.weights_input_hidden)
+        self.activated_hidden = self.sigmoid(self.hidden_sum)
+        self.output_sum = np.dot(self.activated_hidden, self.weights_hidden_output)
+        self.activated_output = self.sigmoid(self.output_sum)
+        return self.activated_output
+    
+    def backward(self, inputs, outputs, predicted):
+        error = outputs - predicted
+        output_delta = error * self.sigmoid_derivative(predicted)
+        
+        error_hidden = np.dot(output_delta, self.weights_hidden_output.T)
+        hidden_delta = error_hidden * self.sigmoid_derivative(self.activated_hidden)
+        
+        self.weights_hidden_output += np.dot(self.activated_hidden.T, output_delta)
+        self.weights_input_hidden += np.dot(inputs.T, hidden_delta)
+        
+    def train(self, inputs, outputs, epochs):
+        for epoch in range(epochs):
+            predicted = self.feedforward(inputs)
+            self.backward(inputs, outputs, predicted)
+    
+def main():
+    st.title("Backpropagation Neural Network")
+    
+    st.write("Enter training data (input and output separated by commas, one example per line):")
+    training_data_input = st.text_area("Input Training Data")
+    
+    if training_data_input:
+        training_data = np.array([[float(x) for x in line.split(',')] for line in training_data_input.split('\n')])
+        inputs = training_data[:, :-1]
+        outputs = training_data[:, -1].reshape(-1, 1)
+        
+        input_size = inputs.shape[1]
+        output_size = outputs.shape[1]
+        hidden_size = st.slider("Number of hidden neurons:", min_value=1, max_value=10)
+        epochs = st.slider("Number of epochs:", min_value=1, max_value=1000)
+        
+        nn = NeuralNetwork(input_size, hidden_size, output_size)
+        nn.train(inputs, outputs, epochs)
+        
+        st.write("Neural Network Trained!")
+
+if __name__ == "__main_
