@@ -1,38 +1,38 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 
-def candidate_elimination(examples):
-    specific_h = examples[0][:-1]
-    general_h = [['?' for _ in range(len(specific_h))] for _ in range(len(specific_h))]
-    
-    for example in examples:
-        if example[-1] == 'Y':
-            for i in range(len(specific_h)):
-                if example[i] != specific_h[i]:
-                    specific_h[i] = '?'
-                    general_h[i][i] = '?'
-        elif example[-1] == 'N':
-            for i in range(len(specific_h)):
-                if example[i] != specific_h[i]:
-                    general_h[i][i] = specific_h[i]
+# Read the data
+data = pd.read_csv('/content/weather.csv')
+concepts = np.array(data.iloc[:, 0:-1])
+print("\nInstances are:\n", concepts)
+target = np.array(data.iloc[:, -1])
+print("\nTarget Values are:", target)
+
+def learn(concepts, target):
+    specific_h = concepts[0].copy()
+
+    print("\nInitialization of specific_h and generic_h")
+    print("\nSpecific Boundary:", specific_h)
+    general_h = [["?" for i in range(len(specific_h))] for j in range(len(specific_h))]
+    print("\nGeneric Boundary:", general_h)
+
+    for i, h in enumerate(concepts):
+        print("\nInstance", i+1, "is", h)
+        if target[i] == "completed":
+            print("Instance is Positive")
+            for x in range(len(specific_h)):
+                if h[x] != specific_h[x]:
+                    specific_h[x] = '?'
+                    general_h[x][x] = '?'
+        elif target[i] == "none":
+            print("Instance is Negative")
+            for x in range(len(specific_h)):
+                if h[x] != specific_h[x]:
+                    general_h[x][x] = specific_h[x]
                 else:
-                    general_h[i][i] = '?'
-    
-    return specific_h, general_h
+                    general_h[x][x] = '?'
+        print("Final Specific_h:", specific_h)
+        print("Final General_h:", general_h)
 
-def main():
-    st.title("Candidate Elimination")
-    
-    st.write("Enter training examples (each example as a comma-separated string with the last element representing the target label):")
-    examples_input = st.text_area("Example input", "Sunny,Hot,High,Weak,N\nSunny,Hot,High,Strong,N\nOvercast,Hot,High,Weak,Y\nRain,Mild,High,Weak,Y\nRain,Cool,Normal,Weak,Y\nRain,Cool,Normal,Strong,N\nOvercast,Cool,Normal,Strong,Y\nSunny,Mild,High,Weak,N\nSunny,Cool,Normal,Weak,Y\nRain,Mild,Normal,Weak,Y\nSunny,Mild,Normal,Strong,Y\nOvercast,Mild,High,Strong,Y\nOvercast,Hot,Normal,Weak,Y\nRain,Mild,High,Strong,N")
-    examples = [example.strip().split(',') for example in examples_input.split('\n')]
-    
-    if st.button("Run Candidate Elimination"):
-        specific_h, general_h = candidate_elimination(examples)
-        
-        st.subheader("Final Hypotheses:")
-        st.write("Specific Hypothesis (S):", specific_h)
-        st.write("General Hypothesis (G):", general_h)
-
-if __name__ == "__main__":
-    main()
+learn(concepts, target)
