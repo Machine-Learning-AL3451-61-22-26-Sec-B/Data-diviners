@@ -1,35 +1,43 @@
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score
-import streamlit as st
+from sklearn.datasets import fetch_20newsgroups
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+import matplotlib.pyplot as plt
 
-def main():
-    st.title("Naive Bayes Classifier")
+# Load the 20 Newsgroups dataset
+newsgroups_train = fetch_20newsgroups(subset='train')
+newsgroups_test = fetch_20newsgroups(subset='test')
 
-    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+# Vectorize the text data
+vectorizer = CountVectorizer(stop_words='english')
+X_train = vectorizer.fit_transform(newsgroups_train.data)
+X_test = vectorizer.transform(newsgroups_test.data)
 
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
+# Initialize and train the Multinomial Naive Bayes classifier
+nb = MultinomialNB()
+nb.fit(X_train, newsgroups_train.target)
 
-        st.write("Preview of Data:")
-        st.write(data.head())
+# Make predictions on the test data
+y_pred = nb.predict(X_test)
 
-        target_variable = st.selectbox("Select the target variable:", options=data.columns)
+# Calculate evaluation metrics
+accuracy = accuracy_score(newsgroups_test.target, y_pred)
+precision = precision_score(newsgroups_test.target, y_pred, average='macro')
+recall = recall_score(newsgroups_test.target, y_pred, average='macro')
 
-        X = data.drop(columns=[target_variable])
-        y = data[target_variable]
+# Print evaluation metrics
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Plot evaluation metrics
+labels = ['Accuracy', 'Precision', 'Recall']
+scores = [accuracy, precision, recall]
 
-        model = GaussianNB()
-        model.fit(X_train, y_train)
-
-        y_pred = model.predict(X_test)
-
-        accuracy = accuracy_score(y_test, y_pred)
-        st.write(f"Accuracy: {accuracy}")
-
-if __name__ == "__main__":
-    main()
+plt.bar(labels, scores)
+plt.ylim([0, 1])  # Set the y-axis limit from 0 to 1
+plt.title('Evaluation Metrics')
+plt.xlabel('Metrics')
+plt.ylabel('Scores')
+plt.show()
