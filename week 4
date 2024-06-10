@@ -1,91 +1,26 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn import metrics
 
-class NaiveBayesClassifier:
-    def fit(self, X, y):
-        self.classes = np.unique(y)
-        self.parameters = {}
-        
-        for i, c in enumerate(self.classes):
-            X_c = X[np.where(y == c)]
-            self.parameters[c] = {
-                'mean': X_c.mean(axis=0),
-                'var': X_c.var(axis=0),
-                'prior': X_c.shape[0] / X.shape[0]
-            }
+# Load the Iris dataset
+iris = load_iris()
+X = iris.data
+y = iris.target
 
-    def predict(self, X):
-        posteriors = []
-        for x in X:
-            posteriors.append([self._posterior(x, c) for c in self.classes])
-        return self.classes[np.argmax(posteriors, axis=1)]
-    
-    def _posterior(self, x, c):
-        mean = self.parameters[c]['mean']
-        var = self.parameters[c]['var']
-        prior = self.parameters[c]['prior']
-        posterior = np.sum(-0.5 * np.log(2. * np.pi * var) - ((x - mean) ** 2) / (2. * var))
-        return posterior + np.log(prior)
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=1)
 
-def main():
-    st.title("Tennis Data Classifier")
+# Initialize the Gaussian Naive Bayes classifier
+gnb = GaussianNB()
 
-    # Team name
-    team_name = "Machine Master"
+# Train the classifier with the training data
+gnb.fit(X_train, y_train)
 
-    # File upload
-    uploaded_file = st.file_uploader("Upload CSV file", type=['csv'])
+# Make predictions with the test data
+y_pred = gnb.predict(X_test)
 
-    if uploaded_file is not None:
-        try:
-            data = pd.read_csv(uploaded_file)
-            st.write("The first 5 rows of data:")
-            st.write(data.head())
-
-            X = data.iloc[:, :-1]
-            y = data.iloc[:, -1]
-
-            # Convert categorical data to numerical
-            for col in X.columns:
-                X[col] = X[col].astype('category').cat.codes
-            y = y.astype('category').cat.codes
-
-            # Split data into train and test sets
-            split_ratio = 0.8
-            indices = np.random.permutation(len(X))
-            train_size = int(len(X) * split_ratio)
-            train_idx, test_idx = indices[:train_size], indices[train_size:]
-            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-            y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-            # Train classifier
-            classifier = NaiveBayesClassifier()
-            classifier.fit(X_train.to_numpy(), y_train.to_numpy())
-
-            # Predict and evaluate
-            y_pred = classifier.predict(X_test.to_numpy())
-            accuracy = np.mean(y_pred == y_test.to_numpy())
-
-            st.write(f"Accuracy: {accuracy:.2f}")
-
-            # Show confusion matrix
-            from sklearn.metrics import confusion_matrix
-            confusion = confusion_matrix(y_test, y_pred)
-            st.write("Confusion Matrix:")
-            st.write(confusion)
-
-            # Show classification report
-            from sklearn.metrics import classification_report
-            report = classification_report(y_test, y_pred, target_names=['Class 0', 'Class 1'])
-            st.write("Classification Report:")
-            st.write(report)
-
-            # Display team name
-            st.write(f"Team Name: {team_name}")
-
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-
-if __name__ == "__main__":
-    main()
+# Evaluate the model's accuracy
+accuracy = metrics.accuracy_score(y_test, y_pred) * 100
+print("Accuracy (in %):", accuracy)
