@@ -1,32 +1,113 @@
-import pandas as pd
 import streamlit as st
-from sklearn.tree import DecisionTreeClassifier
-from sklearn import preprocessing
-from sklearn.tree import export_text
+import pandas as pd
+import math
+import numpy as np
+from google.colab import files
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, plot_tree, export_text
 
-def main():
-    st.title("ID3 Algorithm")
+# Upload the file
+files.upload()
 
-    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+# Read the data
+data = pd.read_csv("/content/weather.csv")
+features = [feat for feat in data.columns if feat != "answer"]
 
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        st.write(data.head())
+class Node:
+    def __init__(self):
+        self.children = []
+        self.value = ""
+        self.isLeaf = False
+        self.pred = ""
 
-        target_variable = st.selectbox("Select the target variable:", options=data.columns)
+def entropy(examples):
+    pos = 0.0
+    neg = 0.0
+    for _, row in examples.iterrows():
+        if row["answer"] == "yes":
+            pos += 1
+        else:
+            neg += 1
+    if pos == 0.0 or neg == 0.0:
+        return 0.0
+    else:
+        p = pos / (pos + neg)
+        n = neg / (pos + neg)
+        return -(p * math.log(p, 2) + n * math.log(n, 2))
 
-        X = data.drop(columns=[target_variable])
-        y = data[target_variable]
+def info_gain(examples, attr):
+    uniq = np.unique(examples[attr])
+    gain = entropy(examples)
+    for u in uniq:
+        subdata = examples[examples[attr] == u]
+        sub_e = entropy(subdata)
+        gain -= (float(len(subdata)) / float(len(examples))) * sub_e
+    return gain
 
-        le = preprocessing.LabelEncoder()
-        y = le.fit_transform(y)
+def ID3(examples, attrs):
+    root = Node()
+    max_gain = 0
+    max_feat = ""
+    for feature in attrs:
+        gain = info_gain(examples, feature)
+        if gain > max_gain:
+            max_gain = gain
+            max_feat = feature
+    root.value = max_feat
+    uniq = np.unique(examples[max_feat])
+    for u in uniq:
+        subdata = examples[examples[max_feat] == u]
+        if entropy(subdata) == 0.0:
+            newNode = Node()
+            newNode.isLeaf = True
+            newNode.value = u
+            newNode.pred = np.unique(subdata["answer"])[0]
+            root.children.append(newNode)
+        else:
+            dummyNode = Node()
+            dummyNode.value = u
+            new_attrs = attrs.copy()
+            new_attrs.remove(max_feat)
+            child = ID3(subdata, new_attrs)
+            dummyNode.children.append(child)
+            root.children.append(dummyNode)
+    return root
 
-        model = DecisionTreeClassifier(criterion="entropy")
-        model.fit(X, y)
+def printTree(root: Node, depth=0):
+    for i in range(depth):
+        print("\t", end="")
+    print(root.value, end="")
+    if root.isLeaf:
+        print(" -> ", root.pred)
+    print()
+    for child in root.children:
+        printTree(child, depth + 1)
 
-        tree_rules = export_text(model, feature_names=list(X.columns))
-        st.write("Decision Tree Rules:")
-        st.text(tree_rules)
+def classify(root: Node, new):
+    for child in root.children:
+        if child.value == new[root.value]:
+            if child.isLeaf:
+                print("Predicted Label for new example", new, " is:", child.pred)
+                return
+            else:
+                classify(child.children[0], new)
 
-if __name__ == "__main__":
-    main()
+root = ID3(data, features)
+print("Decision Tree is:")
+printTree(root)
+print(" --- ")
+
+new = {"outlook": "sunny", "temperature": "hot", "humidity": "normal", "wind": "strong"}
+classify(root, new)
+
+# Using scikit-learn for Decision Tree on Iris Dataset
+clf = DecisionTreeClassifier(random_state=0, max_depth=2)
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.3, random_state=0)
+clf.fit(X_train, y_train)
+
+plot_tree(clf)
+r = export_text(clf, feature_names=iris['feature_names'])
+print(r)
+
